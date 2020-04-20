@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="217e0062-9cba-41dc-874a-284ff1863578" name="fpntorch" url="http://218.77.58.8">
+        <fileTransfer host="218.77.58.8" port="9527" rootFolder="/home/beer" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="9527" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
