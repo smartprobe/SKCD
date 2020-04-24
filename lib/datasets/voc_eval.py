@@ -125,8 +125,7 @@ def voc_eval(detpath,
       try:
         recs = pickle.load(f)
       except:
-        #recs = pickle.load(f, encoding='bytes')
-        recs = pickle.load(f)
+        recs = pickle.load(f, encoding='bytes')
 
   # extract gt objects for this class
   class_recs = {}

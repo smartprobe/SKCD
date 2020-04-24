@@ -143,11 +143,12 @@ if __name__ == '__main__':
 
 
   classes = np.asarray(['__background__',
-                       'aeroplane', 'bicycle', 'bird', 'boat',
-                       'bottle', 'bus', 'car', 'cat', 'chair',
-                       'cow', 'diningtable', 'dog', 'horse',
-                       'motorbike', 'person', 'pottedplant',
-                       'sheep', 'sofa', 'train', 'tvmonitor'])
+                        'HolderA', 'WheelA', 'WheelB', 'BrakeA', 'SpringA',
+                         'BuckleA', 'BuckleB',
+                         'TubeA', 'NutA', 'ScrewA', 'NutB', 'ScrewB',
+                         'WireA', 'PlateA', 'PlateB', 'PlateD', 'PlateE',
+                         'BoltA', 'LoopB', 'JointA', 'JointB',
+                         'FixatorA', 'BearingA', 'PlugA'])
 
   fasterRCNN = _fasterRCNN(args.net, classes)
   checkpoint = torch.load(load_name)
@@ -255,7 +256,7 @@ if __name__ == '__main__':
       if vis:
           im2show = np.copy(im)
 
-      for j in xrange(1, 21):
+      for j in xrange(1, 25):
           inds = np.where(scores[:, j] > thresh)[0]
           cls_scores = scores[inds, j]
           cls_boxes = pred_boxes[inds, :]

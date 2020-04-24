@@ -196,7 +196,7 @@ if __name__ == '__main__':
   vis = args.vis
 
   if vis:
-    thresh = 0.0
+    thresh = 0.5
   else:
     thresh = 0.0
 
@@ -262,8 +262,6 @@ if __name__ == '__main__':
       misc_tic = time.time()
       if vis:
           im = cv2.imread(imdb.image_path_at(i))
-          #print(imdb.image_path_at(i))
-          print(imdb.image_path_at(i).split('/')[-1])
           im2show = np.copy(im)
       for j in xrange(1, imdb.num_classes):
           inds = torch.nonzero(scores[:,j]>thresh).view(-1)
@@ -282,7 +280,7 @@ if __name__ == '__main__':
             keep = nms(cls_dets, cfg.TEST.NMS)
             cls_dets = cls_dets[keep.view(-1).long()]
             if vis:
-              im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.0)
+              im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3)
             all_boxes[j][i] = cls_dets.cpu().numpy()
           else:
             all_boxes[j][i] = empty_array
@@ -305,8 +303,8 @@ if __name__ == '__main__':
       sys.stdout.flush()
 
       if vis:
-          cv2.imwrite('images/' + imdb.image_path_at(i).split('/')[-1], im2show)
-          #pdb.set_trace()
+          cv2.imwrite('images/result%d.png' % (i), im2show)
+          # pdb.set_trace()
           #cv2.imshow('test', im2show)
           #cv2.waitKey(0)
 

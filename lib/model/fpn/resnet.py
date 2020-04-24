@@ -261,6 +261,11 @@ class resnet(_FPN):
       nn.ReLU(True)
       )
 
+    self.RCNN_top_new = nn.Sequential(
+      nn.Linear(256 * 7 * 7, 1024),
+      nn.ReLU(True),
+      nn.Dropout(), )
+
     self.RCNN_cls_score = nn.Linear(1024, self.n_classes)
     if self.class_agnostic:
       self.RCNN_bbox_pred = nn.Linear(1024, 4)
@@ -322,7 +327,13 @@ class resnet(_FPN):
       self.RCNN_layer3.apply(set_bn_eval)
       self.RCNN_layer4.apply(set_bn_eval)
 
+  # def _head_to_tail(self, pool5):
+  #   block5 = self.RCNN_top(pool5)
+  #   fc7 = block5.mean(3).mean(2)
+  #   return fc7
+
   def _head_to_tail(self, pool5):
-    block5 = self.RCNN_top(pool5)
-    fc7 = block5.mean(3).mean(2)
+    pool5_flat = pool5.view(pool5.size(0), -1)
+    fc7 = self.RCNN_top_new(pool5_flat)
     return fc7
+

@@ -5,7 +5,7 @@ CUDA_PATH=/usr/local/cuda/
 export CXXFLAGS="-std=c++11"
 export CFLAGS="-std=c99"
 
-python setup.py build_ext --inplace
+python2 setup.py build_ext --inplace
 rm -rf build
 
 # compile NMS
@@ -14,7 +14,7 @@ echo "Compiling nms kernels by nvcc..."
 nvcc -c -o nms_cuda_kernel.cu.o nms_cuda_kernel.cu \
 	 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -arch=sm_52
 cd ../
-python build.py
+python2 build.py
 
 # compile roi_pooling
 cd ../../
@@ -23,7 +23,7 @@ echo "Compiling roi pooling kernels by nvcc..."
 nvcc -c -o roi_pooling.cu.o roi_pooling_kernel.cu \
 	 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -arch=sm_52
 cd ../
-python build.py
+python2 build.py
 
 # compile roi_align
 cd ../../
@@ -32,7 +32,7 @@ echo "Compiling roi align kernels by nvcc..."
 nvcc -c -o roi_align_kernel.cu.o roi_align_kernel.cu \
 	 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -arch=sm_52
 cd ../
-python build.py
+python2 build.py
 
 # compile roi_crop
 cd ../../
@@ -41,4 +41,4 @@ echo "Compiling roi crop kernels by nvcc..."
 nvcc -c -o roi_crop_cuda_kernel.cu.o roi_crop_cuda_kernel.cu \
 	 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -arch=sm_52
 cd ../
-python build.py
+python2 build.py

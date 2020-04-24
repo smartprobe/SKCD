@@ -295,4 +295,3 @@ def compare_grid_sample():
     pdb.set_trace()
 
     delta = (grad_input_off.data - grad_input_stn).sum()
-

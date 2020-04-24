@@ -2,7 +2,7 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <orderEntry type="jdk" jdkName="Python 2.7 (py2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Remote Python 2.7.5 (sftp://beer@218.77.58.8:9527/home/beer/.virtualenvs/pytorch/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">

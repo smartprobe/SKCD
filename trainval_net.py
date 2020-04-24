@@ -374,20 +374,8 @@ if __name__ == '__main__':
           for tag, value in info.items():
             logger.scalar_summary(tag, value, step)
 
-        loss_com = loss_temp
         loss_temp = 0
         start = time.time()
-
-
-
-    if epoch == 1:
-        min_loss = loss_com
-        best_epoch = epoch
-    elif loss_com < min_loss:
-        min_loss = loss_com
-        best_epoch = epoch
-    else:
-        print('No improvement, do not save, the best is {}, the step is {}'.format(round(min_loss, 4), best_epoch))
 
     if args.mGPUs:
       save_name = os.path.join(output_dir, 'fpn_{}_{}_{}.pth'.format(args.session, epoch, step))
@@ -410,7 +398,6 @@ if __name__ == '__main__':
         'class_agnostic': args.class_agnostic,
       }, save_name)
     _print('save model: {}'.format(save_name), logging)
-
 
     end = time.time()
     print(end - start)

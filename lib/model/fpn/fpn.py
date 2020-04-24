@@ -17,6 +17,12 @@ from model.rpn.proposal_target_layer import _ProposalTargetLayer
 from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_grid_gen, _affine_theta
 import time
 import pdb
+from model.rpn.union_box_layer_tf import union_box_layer
+from model.rpn.edge_box_layer_tf import edge_box_layer
+from model.structure.structure import  _Structure_inference
+from model.rpn.local_box_layer import local_box_layer
+
+
 
 class _FPN(nn.Module):
     """ FPN """
@@ -40,6 +46,7 @@ class _FPN(nn.Module):
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
+        self.Structure_inference = _Structure_inference(1024, 1024, 1024)
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -63,6 +70,19 @@ class _FPN(nn.Module):
                 m.weight.data.normal_(1.0, 0.02)
                 m.bias.data.fill_(0)
 
+        def normal_init1(m, mean, stddev, truncated=False):
+            """
+            weight initalizer: truncated normal and random normal.
+            """
+            # x is a parameter
+            if truncated:
+                m.weight.data.normal_().fmod_(2).mul_(stddev).add_(mean)  # not a perfect approximation
+            else:
+                m.weight_u.data.normal_(mean, stddev)
+                m.Concat_w.data.normal_(mean, stddev)
+                # nn.init.constant(m.weight_confusion, 1/3)
+
+
         normal_init(self.RCNN_toplayer, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_smooth1, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_smooth2, 0, 0.01, cfg.TRAIN.TRUNCATED)
@@ -77,6 +97,7 @@ class _FPN(nn.Module):
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
         weights_init(self.RCNN_top, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init1(self.Structure_inference, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()
@@ -101,7 +122,7 @@ class _FPN(nn.Module):
         _,_,H,W = y.size()
         return F.upsample(x, size=(H,W), mode='bilinear') + y
 
-    def _PyramidRoI_Feat(self, feat_maps, rois, im_info):
+    def _PyramidRoI_Feat(self, feat_maps, rois, whole,local,im_info):
         ''' roi pool on pyramid feature maps'''
         # do roi pooling based on predicted rois
         img_area = im_info[0][0] * im_info[0][1]
@@ -124,6 +145,8 @@ class _FPN(nn.Module):
 
         elif cfg.POOLING_MODE == 'align':
             roi_pool_feats = []
+            whole_pool_feats = []
+            local_pool_feats =[]
             box_to_levels = []
             for i, l in enumerate(range(2, 6)):
                 if (roi_level == l).sum() == 0:
@@ -138,10 +161,18 @@ class _FPN(nn.Module):
                 scale = feat_maps[i].size(2) / im_info[0][0]
                 feat = self.RCNN_roi_align(feat_maps[i], rois[idx_l], scale)
                 roi_pool_feats.append(feat)
+                whole_feat = self.RCNN_roi_align(feat_maps[i], whole[idx_l], scale)
+                whole_pool_feats.append(whole_feat)
+                local_feat = self.RCNN_roi_align(feat_maps[i], local[idx_l], scale)
+                local_pool_feats.append(local_feat)
             roi_pool_feat = torch.cat(roi_pool_feats, 0)
             box_to_level = torch.cat(box_to_levels, 0)
             idx_sorted, order = torch.sort(box_to_level)
             roi_pool_feat = roi_pool_feat[order]
+            whole_pool_feats = torch.cat(whole_pool_feats, 0)
+            whole_pool_feats = whole_pool_feats[order]
+            local_pool_feats = torch.cat(local_pool_feats, 0)
+            local_pool_feats = local_pool_feats[order]
 
         elif cfg.POOLING_MODE == 'pool':
             roi_pool_feats = []
@@ -159,7 +190,7 @@ class _FPN(nn.Module):
             idx_sorted, order = torch.sort(box_to_level)
             roi_pool_feat = roi_pool_feat[order]
             
-        return roi_pool_feat
+        return roi_pool_feat,whole_pool_feats,local_pool_feats
 
     def forward(self, im_data, im_info, gt_boxes, num_boxes):
         batch_size = im_data.size(0)
@@ -237,12 +268,33 @@ class _FPN(nn.Module):
             rois_pos = Variable(rois[pos_id])
             rois = Variable(rois)
 
+        # ========= Union Box ==========
+        whole_box = union_box_layer(rois, im_info)
+        whole_box = whole_box.reshape(whole_box.shape[0], 1, 5)
+        whole = torch.from_numpy(whole_box)
+        whole = whole.type(torch.cuda.FloatTensor)
+        all_whole = torch.cat(rois.size()[0] * [whole], 0)
+        all_whole = all_whole.view([-1, 5])
+        # print (all_whole.size())
+
+        edges = edge_box_layer(rois, im_info)
+        edges = torch.from_numpy(edges)
+
+        local = local_box_layer(rois, im_info)
+        local = torch.from_numpy(local).cuda()
+
+
         # pooling features based on rois, output 14x14 map
-        roi_pool_feat = self._PyramidRoI_Feat(mrcnn_feature_maps, rois, im_info)
+        roi_pool_feat,whole_pool_feat,local_pool_feat = self._PyramidRoI_Feat(mrcnn_feature_maps, rois, all_whole, local,im_info)
+
 
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(roi_pool_feat)
+        wholed_feat = self._head_to_tail(whole_pool_feat)
+        localed_feat = self._head_to_tail(local_pool_feat)
 
+        # pooled_feat = structure_inference_spmm(pooled_feat , whole_pool_feat, edges, rois.size()[1])
+        pooled_feat = self.Structure_inference(edges, pooled_feat, wholed_feat,localed_feat ,rois.size()[0])
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
