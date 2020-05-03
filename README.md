@@ -1,5 +1,4 @@
-fpn.pytorch
-Pytorch implementation of Feature Pyramid Network (FPN) for Object Detection
+# Exploring Structural Knowledge for Automated Visual Inspection of Moving Trains
 
 ## Introduction
 
